@@ -1,0 +1,349 @@
+use crate::jni_c_header::*;
+
+foreign_enum!(
+    ///Gamepad's elements which state can be represented by value from 0.0 to 1.0.
+    enum Button {
+        South = Button::South,
+        East = Button::East,
+        North = Button::North,
+        West = Button::West,
+        C = Button::C,
+        Z = Button::Z,
+        LeftTrigger = Button::LeftTrigger,
+        LeftTrigger2 = Button::LeftTrigger2,
+        RightTrigger = Button::RightTrigger,
+        RightTrigger2 = Button::RightTrigger2,
+        Select = Button::Select,
+        Start = Button::Start,
+        Mode = Button::Mode,
+        LeftThumb = Button::LeftThumb,
+        RightThumb = Button::RightThumb,
+        DPadUp = Button::DPadUp,
+        DPadDown = Button::DPadDown,
+        DPadLeft = Button::DPadLeft,
+        DPadRight = Button::DPadRight,
+        Unknown = Button::Unknown,
+    }
+);
+
+foreign_enum!(
+    /// Gamepad's elements which state can be represented by value from -1.0 to 1.0.
+    enum Axis {
+        LeftStickX = Axis::LeftStickX,
+        LeftStickY = Axis::LeftStickY,
+        LeftZ = Axis::LeftZ,
+        RightStickX = Axis::RightStickX,
+        RightStickY = Axis::RightStickY,
+        RightZ = Axis::RightZ,
+        DPadX = Axis::DPadX,
+        DPadY = Axis::DPadY,
+        Unknown = Axis::Unknown,
+    }
+);
+
+foreigner_class!(
+    /// State of device's power supply.
+    /// 
+    /// Battery level is reported as integer between 0 and 100.
+    class PowerInfo {
+        self_type PowerInfoWrapper;
+        private constructor = empty;
+        /// The power status
+        /// Unknown: Failed to determine power status.
+        /// Wired: Device doesn't have battery.
+        /// Discharging: Device is running on the battery.
+        /// Charging: Battery is charging.
+        /// Charged: Battery is charged.
+        method PowerInfoWrapper::status(&self) -> &str; alias getStatus;
+        /// The power level (if applicable)
+        /// Only applied on charging or discharging
+        method PowerInfoWrapper::value(&self) -> u8; alias getValue;
+    }
+);
+
+foreigner_class!(
+    /// It's not possible to create instance of this type directly, but you can obtain 
+    /// one from Gamepad handle or any event. ID is valid for entire lifetime of Gilrs
+    /// context.
+    class GamepadId {
+        self_type GamepadId;
+        private constructor = empty;
+    }
+);
+
+foreigner_class!(
+    /// Platform specific event code.
+    class Code {
+        self_type Code;
+        private constructor = empty;
+        /// Convert this into an integer
+        /// @return an integer representing the platform specific event code
+        method Code::into_u32(&self) -> u32; alias getCode;
+    }
+);
+
+foreigner_class!(
+    /// Represents duration.
+    /// 
+    /// This type is only useful as input parameter for other functions for force
+    /// feedback. Keep in mind that Ticks is not precise representation of time.
+    class Ticks {
+        self_type Ticks;
+        /// A new ticks object
+        /// 
+        /// @param ms Milliseconds representing a duration of time
+        /// @return a new tick object
+        constructor ticks(ms: u32) -> Ticks;
+    }
+);
+
+foreigner_class!(
+    /// Information about button stored in State.
+    class ButtonData {
+        self_type ButtonData;
+        private constructor = empty;
+        /// @return true if button is pressed.
+        method ButtonData::is_pressed(&self) -> bool; alias isPressed;
+        /// @return analog of button.
+        method ButtonData::value(&self) -> f32; alias getValue;
+        /// @return true if button is repeating.
+        method ButtonData::is_repeating(&self) -> bool; alias isRepeating;
+        /// @return 0.0 - 0.1 value of counter when button state last changed.
+        method ButtonData::counter(&self) -> u64; alias getCounter;
+        /// @return when button state last changed.
+        method ButtonData::timestamp(&self) -> SystemTime; alias getTimestamp;
+    }
+);
+
+foreigner_class!(
+    /// Information about axis stored in State
+    class AxisData {
+        self_type AxisData;
+        private constructor = empty;
+        /// @return 0.0 - 1.0 value of axis.
+        method AxisData::value(&self) -> f32; alias getValue;
+        /// @return value of counter when axis value last changed.
+        method AxisData::counter(&self) -> u64; alias getCounter;
+        /// @return when axis value last changed.
+        method AxisData::timestamp(&self) -> SystemTime; alias getTimestamp;
+    }
+);
+
+foreigner_class!(
+    /// Rust-cached gamepad state.
+    /// 
+    /// This is useful for if you don't care about realtime input, which requires catching events.
+    class GamepadState {
+        self_type GamepadState;
+        private constructor = empty;
+        /// @return if the given button is pressed. Returns false if there is no information about btn or it is not pressed.
+        method GamepadState::is_pressed(&self, code: Code) -> bool; alias isPressed;
+        /// @return value from 1.0 to 0.0. When there is no information about it, returns 0.0.
+        method GamepadState::value(&self, code: Code) -> f32; alias getValue;
+        /// @return button state and when it changed.
+        method gamepad_state_button_data(&self, code: Code) -> Option<ButtonData>; alias getButtonData;
+        /// @return axis state and when it changed.
+        method gamepad_state_axis_data(&self, code: Code) -> Option<AxisData>; alias getAxisData;
+    }
+);
+
+foreigner_class!(
+    /// Represents handle to game controller.
+    /// 
+    /// Using this struct you can access cached gamepad state, information about gamepad such as name or UUID and
+    /// manage force feedback effects.
+    class Gamepad {
+        self_type Gamepad<'a>;
+        private constructor = empty;
+        /// @return the mapping name if it exists otherwise returns the os provided name.
+        method Gamepad::name(&self) -> &str; alias getName;
+        /// @return if getMappingSource() is SdlMappings returns the name of the mapping used by the gamepad. Otherwise
+        /// returns nothing.
+        method gamepad_map_name(&self) -> String; alias getMapName;
+        /// @return the name of the gamepad supplied by the OS.
+        method Gamepad::os_name(&self) -> &str; alias getOSName;
+        //TODO: https://docs.rs/gilrs/0.7.1/gilrs/struct.Gamepad.html#method.uuid
+        /// @return cached gamepad state.
+        method gamepad_state(&self) -> GamepadState; alias getState;
+        /// @return if gamepad is connected.
+        method Gamepad::is_connected(&self) -> bool; alias isConnected;
+        /// Examines cached gamepad state to check if given button is pressed. Panics if btn is Unknown.
+        /// If you know Code of the element that you want to examine, it's recommended to use methods directly on State, 
+        /// because this version have to check which Code is mapped to element of gamepad.        
+        /// @param btn - The button to poll
+        method Gamepad::is_pressed(&self, btn: Button) -> bool; alias isPressed;
+        /// Examines cached gamepad state to check axis's value. Panics if axis is Unknown.
+        /// If you know Code of the element that you want to examine, it's recommended to use methods directly on State, 
+        /// because this version have to check which Code is mapped to element of gamepad.
+        /// @param axis Axis - The axis to poll
+        method Gamepad::value(&self, axis: Axis) -> f32; alias getValue;
+        /// Returns button state and when it changed.
+        /// 
+        /// If you know Code of the element that you want to examine, it's recommended to use methods directly on State, because 
+        /// this version have to check which Code is mapped to element of gamepad.
+        /// @parma btn - The button to get the data of 
+        method gamepad_button_data(&self, btn: Button) -> Option<ButtonData>; alias getButtonData;
+        /// Returns axis state and when it changed.
+        /// 
+        /// If you know Code of the element that you want to examine, it's recommended to use methods directly on State, because 
+        /// this version have to check which Code is mapped to element of gamepad.
+        /// @param axis - The axis to get the data of
+        method gamepad_axis_data(&self, axis: Axis) -> Option<AxisData>; alias getAxisData;
+        /// @return device's power supply state. See PowerInfo for details.
+        method gamepad_power_info(&self) -> PowerInfoWrapper; alias getPowerInfo;
+        //TODO: https://docs.rs/gilrs/0.7.1/gilrs/struct.Gamepad.html#method.mapping_source
+        /// @returns if force feedback is supported by device.
+        method Gamepad::is_ff_supported(&self) -> bool; alias isFFSupported;
+        //TODO: https://docs.rs/gilrs/0.7.1/gilrs/struct.Gamepad.html#method.set_listener_position
+        //TODO: https://docs.rs/gilrs/0.7.1/gilrs/struct.Gamepad.html#method.axis_or_btn_name
+        //TODO: https://docs.rs/gilrs/0.7.1/gilrs/struct.Gamepad.html#method.button_code
+        //TODO: https://docs.rs/gilrs/0.7.1/gilrs/struct.Gamepad.html#method.axis_code
+        /// @return area in which axis events should be ignored
+        method gamepad_deadzone(&self, axis: Code) -> Option<f64>; alias getDeadzone;
+        /// @return ID of gamepad
+        method gamepad_id(&self) -> GamepadId; alias getID;
+    }
+);
+
+foreigner_class!(
+    /// Defines scheduling of the basic force feedback effect.
+    ///        ____________            ____________            ____________
+    ///        |          |            |          |            |
+    /// _______|          |____________|          |____________|
+    ///  after   play_for   with_delay   play_for   with_delay   play_for
+    class Replay {
+        self_type Replay;
+        constructor replay(after: u32, play_for: u32, with_delay: u32) -> Replay;
+        /// @return duration in ticks (ms) after play is called
+        method replay_after(&self) -> Ticks; alias getAfter;
+        /// @return playback duration in ticks (ms)
+        method replay_play_for(&self) -> Ticks; alias getPlayFor;
+        /// @return the delay between ticks (ms)
+        method replay_with_delay(&self) -> Ticks; alias getWithDelay;
+    }
+);
+
+foreigner_class!(
+    /// Envelope shaped attenuation(time) function.
+    class Envelope {
+        self_type Envelope;
+        /// @param attack_strength ticks - ms
+        /// @param attack_level level 0.0 - 1.0
+        /// @param fade_length ticks ms
+        /// @param fade_level level 0.0 - 1.0
+        constructor envelope(attack_strength: u32, attack_level: f32, fade_length: u32, fade_level: f32) -> Envelope;
+    }
+);
+
+foreign_enum!(
+    enum BaseEffectTypeWrapper {
+        Strong = BaseEffectTypeWrapper::Strong,
+        Weak = BaseEffectTypeWrapper::Weak,
+    }
+);
+
+foreigner_class!(
+    /// Currently base effect support only xinput model of force feedback, which means that gamepad have weak and strong motor.
+    class BaseEffect {
+        self_type BaseEffect;
+        /// @param kind - This is a test
+        /// @param magnitude
+        /// @param scheduling
+        /// @param envelope
+        constructor base_effect(kind: BaseEffectTypeWrapper, magnitude: u16, scheduling: Replay, envelope: Envelope) -> BaseEffect;
+        // @return strong or weak base effect kind.
+        method base_effect_kind(&self) -> BaseEffectTypeWrapper; alias getKind;
+        /// @return when to replay the effect.
+        method base_effect_scheduling(&self) -> Replay; alias getScheduling;
+        /// @return envelope shaped attenuation(time) function.
+        method base_effect_envelope(&self) -> Envelope; alias getEnvelope;
+    }
+);
+
+foreigner_class!(
+    /// Holds information about gamepad event.
+    class Event {
+        self_type EventWrapper;
+        private constructor = empty;
+        /// @return the event's message
+        method EventWrapper::message(&self) -> &str; alias getMessage;
+        /// @return id of gamepad
+        method EventWrapper::gamepad(&self) -> GamepadId; alias getGamepad;
+        /// @return associated button
+        method EventWrapper::button(&self) -> Button; alias getButton;
+        /// @return associated axis 
+        method EventWrapper::axis(&self) -> Axis; alias getAxis;
+        /// @return associated code
+        method EventWrapper::code(&self) -> Option<Code>; alias getCode;
+        /// @return associated value
+        method EventWrapper::value(&self) -> Option<f64>; alias getValue;
+        /// @return time emitted
+        method EventWrapper::time(&self) -> SystemTime; alias getTime;
+    }
+);
+
+foreigner_class!(
+    /// Main object responsible of managing gamepads.
+    /// 
+    /// In order to get gamepad handle, use gamepad(), or connected_gamepad(). The main difference between these two is that 
+    /// gamepad() will also return handle to gamepad that is currently disconnected. However, both functions will return None if 
+    /// gamepad with given id has never existed.
+    class Gilrs {
+        self_type Gilrs;
+        ///Creates new Gilrs with default settings.
+        constructor new_gilrs() -> Result<Gilrs, String>;
+        /// @return next pending event
+        method next_event(&mut self) -> Option<EventWrapper>; alias nextEvent;
+        //TODO: https://docs.rs/gilrs/0.7.1/gilrs/struct.Gilrs.html#method.update
+        /// @return handle to gamepad with given ID. Unlike connected_gamepad(), this function will also return handle to gamepad
+        /// that is currently disconnected
+        method Gilrs::gamepad<'a>(&'a mut self, id: GamepadId) -> Gamepad<'a>; alias getGamepad;
+        /// @return a connected gamepad or nothing
+        method Gilrs::connected_gamepad(&mut self, id: GamepadId) -> Option<Gamepad<'a>>; alias getConnectedGamepad;
+        /// @return all connected / disconnected gamepads
+        method gilrs_gamepads(&self) -> Vec<Gamepad<'_>>; alias getGamepads;
+        //TODO: https://docs.rs/gilrs/0.7.1/gilrs/struct.Gilrs.html#method.insert_event
+        //TODO: https://docs.rs/gilrs/0.7.1/gilrs/struct.Gilrs.html#method.set_mapping
+        //TODO: https://docs.rs/gilrs/0.7.1/gilrs/struct.Gilrs.html#method.set_mapping_strict
+    }
+);
+
+foreigner_class!(
+    /// Handle to force feedback effect.
+    /// Effect represents force feedback effect that can be played on one or more gamepads. It uses a form of reference counting, 
+    /// so it can be cheaply cloned. To create new Effect use EffectBuilder.
+    /// All methods on can return Error::SendFailed although it shouldn't normally happen.
+    /// @see EffectBuilder
+    class Effect {
+        self_type Effect;
+        private constructor = empty;
+        /// Plays effect on all associated gamepads.
+        /// @return error in a string format
+        method effect_play(&self) -> Result<(), String>; alias play;
+        /// Adds gamepad to the list of gamepads associated with effect.
+        /// @return error in a string format
+        method effect_add_gamepad(&self, gamepad: &Gamepad<'a>) -> Result<(), String>; alias setGamepads; 
+        /// Changes gain of the effect. gain will be clamped to [0.0, Float.MAX].
+        // @return error in a string format
+        method effect_set_gain(&self, gain: f32) -> Result<(), String>; alias setGain;
+    }
+);
+
+foreigner_class!(
+    /// Creates new Effect.
+    class EffectBuilder {
+        self_type EffectBuilderWrapper;
+        /// Creates new builder with following defaults: no gamepads, no base effects, repeat set to infinitely, no distance model,
+        /// position in (0.0, 0.0, 0.0) and gain 1.0. Use finish() to create new effect.
+        constructor EffectBuilderWrapper::new() -> EffectBuilderWrapper;
+        /// Adds new BaseEffect.
+        method EffectBuilderWrapper::add_effect(&self, base_effect: BaseEffect) -> EffectBuilderWrapper; alias addEffect;
+        //method EffectBuilder::gamepads(&self, base_effect: BaseEffect) -> EffectBuilderWrapper; alias addEffect;
+        // TODO: https://docs.rs/gilrs/0.7.1/gilrs/ff/struct.EffectBuilder.html
+        /// Adds gamepad to the list of gamepads associated with effect.
+        method EffectBuilderWrapper::add_gamepad(&self, gamepad: &Gamepad<'a>) -> EffectBuilderWrapper; alias addGamepad;
+        /// Validates all parameters and creates new effect.
+        /// @return Effect or an error string
+        method EffectBuilderWrapper::finish(&self, gilrs: &mut Gilrs) -> Result<Effect, String>; alias finish;
+    }
+);
