@@ -1,4 +1,4 @@
-#JGILrs
+# JGILrs
 
 A WIP java wrapper for the rust Game Input Library
 
